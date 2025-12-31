@@ -38,8 +38,9 @@ def load_model():
     st.info("Model files not found. Building model...")
 
     # ---- Load SPLIT CSV files ----
-    movie_files = sorted(glob.glob("tmdb_5000_movies_part*.csv"))
-    credit_files = sorted(glob.glob("tmdb_5000_credits_part*.csv"))
+    movies = pd.read_csv("tmdb_5000_movies.csv")
+    credits = pd.read_csv("tmdb_5000_credits.csv")
+
 
     if not movie_files or not credit_files:
         st.error("Dataset files not found. Please upload split CSV files.")

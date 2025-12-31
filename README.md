@@ -4,6 +4,7 @@ A content-based Movie Recommendation System built using Machine Learning and dep
 
 This project recommends similar movies based on genres, keywords, cast, crew, and overview using cosine similarity.
 
+Streamlit App Link = https://movie-recommendation-fo4a258hl37zpyqjya43l3.streamlit.app/
 ---
 
 ## 🚀 Features

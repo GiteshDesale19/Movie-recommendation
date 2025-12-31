@@ -3,6 +3,7 @@ import pandas as pd
 import pickle
 import os
 import ast
+import glob
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -11,10 +12,10 @@ st.set_page_config(page_title="Movie Recommendation System", page_icon="🎬")
 st.title("🎬 Movie Recommendation System")
 st.write("Select a movie and get similar movie recommendations.")
 
-# -------- DEBUG: show files Streamlit can see --------
-st.write("📂 Files in app directory:", os.listdir("."))
+# ---------- DEBUG ----------
+st.write("📂 Files available to app:", os.listdir("."))
 
-# -------- Helper functions --------
+# ---------- Helper functions ----------
 def convert(text):
     return [i["name"] for i in ast.literal_eval(text)]
 
@@ -27,11 +28,11 @@ def fetch_director(text):
             return [i["name"]]
     return []
 
-# -------- Load or build model --------
+# ---------- Load or build model ----------
 @st.cache_data
 def load_model():
 
-    # Use pickle if available
+    # Load cached model if exists
     if os.path.exists("movies.pkl") and os.path.exists("similarity.pkl"):
         return (
             pickle.load(open("movies.pkl", "rb")),
@@ -40,29 +41,23 @@ def load_model():
 
     st.info("Model files not found. Building model...")
 
-    # -------- Auto-detect CSV files --------
-    files = os.listdir(".")
+    # Auto-detect CSVs
+    movie_files = glob.glob("*movie*.csv")
+    credit_files = glob.glob("*credit*.csv")
 
-    movie_file = None
-    credit_file = None
-
-    for f in files:
-        if "movie" in f.lower() and f.endswith(".csv"):
-            movie_file = f
-        if "credit" in f.lower() and f.endswith(".csv"):
-            credit_file = f
-
-    if movie_file is None or credit_file is None:
-        st.error("Required CSV files not found in repository.")
+    if not movie_files or not credit_files:
+        st.error("CSV files not found. Please upload movie & credit CSV files.")
         st.stop()
 
-    st.write("🎬 Using movie file:", movie_file)
-    st.write("🎭 Using credits file:", credit_file)
+    movie_file = movie_files[0]
+    credit_file = credit_files[0]
+
+    st.write("🎬 Movie file detected:", movie_file)
+    st.write("🎭 Credit file detected:", credit_file)
 
     movies = pd.read_csv(movie_file)
     credits = pd.read_csv(credit_file)
 
-    # -------- Preprocessing --------
     movies = movies.merge(credits, on="title")
     movies = movies[["movie_id","title","overview","genres","keywords","cast","crew"]]
     movies.dropna(inplace=True)
@@ -87,18 +82,16 @@ def load_model():
     movies["tags"] = movies["tags"].apply(lambda x: " ".join(x).lower())
     new_df = movies[["movie_id","title","tags"]]
 
-    # -------- Vectorization --------
     cv = CountVectorizer(max_features=3000, stop_words="english")
     vectors = cv.fit_transform(new_df["tags"]).toarray()
     similarity = cosine_similarity(vectors)
 
-    # -------- Save --------
     pickle.dump(new_df, open("movies.pkl","wb"))
     pickle.dump(similarity, open("similarity.pkl","wb"))
 
     return new_df, similarity
 
-# -------- Recommendation --------
+# ---------- App ----------
 movies, similarity = load_model()
 
 def recommend(movie):

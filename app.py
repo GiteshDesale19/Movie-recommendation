@@ -39,8 +39,9 @@ def load_data_and_model():
     # Otherwise build from CSV files
     st.warning("Model files not found. Building model...")
 
-    movies = pd.read_csv("data/tmdb_5000_movies.csv")
-    credits = pd.read_csv("data/tmdb_5000_credits.csv")
+movies = pd.read_csv("tmdb_5000_movies.csv")
+credits = pd.read_csv("tmdb_5000_credits.csv")
+
 
     movies = movies.merge(credits, on="title")
     movies = movies[["movie_id","title","overview","genres","keywords","cast","crew"]]

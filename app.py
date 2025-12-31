@@ -27,7 +27,7 @@ def fetch_director(text):
 # ---------------- Load or Build Model ----------------
 @st.cache_data
 def load_model():
-    # If pickle files exist, load them
+    # Load pickle files if they exist
     if os.path.exists("movies.pkl") and os.path.exists("similarity.pkl"):
         movies = pickle.load(open("movies.pkl", "rb"))
         similarity = pickle.load(open("similarity.pkl", "rb"))
@@ -82,7 +82,6 @@ def recommend(movie):
         reverse=True,
         key=lambda x: x[1]
     )[1:6]
-
     return [movies.iloc[i[0]].title for i in movie_list]
 
 # ---------------- Main App ----------------

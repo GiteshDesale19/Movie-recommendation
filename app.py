@@ -3,6 +3,7 @@ import pandas as pd
 import pickle
 import os
 import ast
+import glob
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -27,6 +28,7 @@ def fetch_director(text):
 # ---------------- Load or Build Model ----------------
 @st.cache_data
 def load_model():
+
     # Load pickle files if they exist
     if os.path.exists("movies.pkl") and os.path.exists("similarity.pkl"):
         movies = pickle.load(open("movies.pkl", "rb"))
@@ -35,10 +37,18 @@ def load_model():
 
     st.info("Model files not found. Building model...")
 
-    # CSV files in ROOT directory
-    movies = pd.read_csv("tmdb_5000_movies.csv")
-    credits = pd.read_csv("tmdb_5000_credits.csv")
+    # ---- Load SPLIT CSV files ----
+    movie_files = sorted(glob.glob("tmdb_5000_movies_part*.csv"))
+    credit_files = sorted(glob.glob("tmdb_5000_credits_part*.csv"))
 
+    if not movie_files or not credit_files:
+        st.error("Dataset files not found. Please upload split CSV files.")
+        st.stop()
+
+    movies = pd.concat([pd.read_csv(f) for f in movie_files], ignore_index=True)
+    credits = pd.concat([pd.read_csv(f) for f in credit_files], ignore_index=True)
+
+    # ---- Preprocessing ----
     movies = movies.merge(credits, on="title")
     movies = movies[["movie_id", "title", "overview", "genres", "keywords", "cast", "crew"]]
     movies.dropna(inplace=True)
@@ -64,10 +74,12 @@ def load_model():
 
     new_df = movies[["movie_id", "title", "tags"]]
 
+    # ---- Vectorization ----
     cv = CountVectorizer(max_features=3000, stop_words="english")
     vectors = cv.fit_transform(new_df["tags"]).toarray()
     similarity = cosine_similarity(vectors)
 
+    # ---- Save model files ----
     pickle.dump(new_df, open("movies.pkl", "wb"))
     pickle.dump(similarity, open("similarity.pkl", "wb"))
 
@@ -85,17 +97,12 @@ def recommend(movie):
     return [movies.iloc[i[0]].title for i in movie_list]
 
 # ---------------- Main App ----------------
-try:
-    with st.spinner("Loading movie data..."):
-        movies, similarity = load_model()
+with st.spinner("Loading movie data..."):
+    movies, similarity = load_model()
 
-    selected_movie = st.selectbox("🎥 Choose a movie", movies["title"].values)
+selected_movie = st.selectbox("🎥 Choose a movie", movies["title"].values)
 
-    if st.button("Recommend"):
-        st.subheader("Recommended Movies")
-        for movie in recommend(selected_movie):
-            st.write("👉", movie)
-
-except Exception as e:
-    st.error("Something went wrong. Please check your dataset files.")
-    st.code(str(e))
+if st.button("Recommend"):
+    st.subheader("Recommended Movies")
+    for movie in recommend(selected_movie):
+        st.write("👉", movie)
